@@ -11,8 +11,8 @@ Motor intake_motor(-12, MotorGearset::green); // Intake motor on port 4
 Motor conveyor_motor(3, MotorGearset::green); // Flywheel motor on port
 
 // Create motor groups for left and right sides
-MotorGroup left_motors({1}, MotorGearset::blue); // Left motor group with blue gearset
-MotorGroup right_motors({-10}, MotorGearset::blue); // Right motor group with blue gearset 
+MotorGroup left_motors({1}, MotorGearset::green); // Left motor group with blue gearset
+MotorGroup right_motors({10}, MotorGearset::green); // Right motor group with blue gearset 
 
 // Update drivetrain initialization to use motor groups and required parameters
 lemlib::Drivetrain drivetrain(
@@ -47,9 +47,9 @@ lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
 );
 
 // angular PID controller
-lemlib::ControllerSettings angular_controller(2, // proportional gain (kP)
+lemlib::ControllerSettings angular_controller(1, // proportional gain (kP)
                                               0, // integral gain (kI)
-                                              10, // derivative gain (kD)
+                                              1, // derivative gain (kD)
                                               0, // anti windup
                                               0, // small error range, in degrees
                                               0, // small error range timeout, in milliseconds
