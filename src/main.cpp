@@ -193,7 +193,10 @@ void autonomous()
  */
 void opcontrol() {
 	// using namespace pros;
-  
+    
+    autonomous();
+    return; // Uncomment this line to run autonomous instead of opcontrol
+
     // loop forever
     while (true) {
         int start_t = pros::millis();
