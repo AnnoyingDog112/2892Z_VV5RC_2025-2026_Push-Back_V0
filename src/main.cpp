@@ -1,6 +1,9 @@
 #include "main.h"
 #include "lemlib/api.hpp"
 #include "api.h"
+#include <iostream>
+#include "Lemlib_pid-logging.hpp"
+
 // #include "okapi/api.hpp" // <-- UNCOMMENT THIS LINE
 
 using namespace pros;
@@ -12,7 +15,7 @@ Motor conveyor_motor(3, MotorGearset::green); // Flywheel motor on port
 
 // Create motor groups for left and right sides
 MotorGroup left_motors({1}, MotorGearset::green); // Left motor group with blue gearset
-MotorGroup right_motors({10}, MotorGearset::green); // Right motor group with blue gearset 
+MotorGroup right_motors({-10}, MotorGearset::green); // Right motor group with blue gearset 
 
 // Update drivetrain initialization to use motor groups and required parameters
 lemlib::Drivetrain drivetrain(
@@ -108,10 +111,16 @@ void on_center_button()
 void initialize() 
 {
 	using namespace pros::lcd;
-	lcd::initialize();
+	pros::delay(500);
+    lcd::initialize();
 	set_text(1, "Hello PROS User!");
 
-	register_btn1_cb(on_center_button);
+    std::cout << "=== Program started ===" << std::endl;
+    register_btn1_cb(on_center_button);
+    chassis.calibrate(); // optional: waits for IMU calibration
+    chassis.setPose(0, 0, 0); // optional: initialize position
+    autonomous(); // non-blocking
+
 }
 
 /**
@@ -149,33 +158,12 @@ void competition_initialize() {}
 ASSET(example_txt)
 void autonomous() 
 {
+    
     using namespace pros;
     // set position to x:0, y:0, heading:0
     chassis.setPose(0, 0, 0);
     // turn to face heading 90 with a very long timeout
-    const float target = 90; // target heading in degrees
-    chassis.turnToHeading(target, 100000);
-    double last_t = millis();
-    std::cout << "Time, Error, P, I, D, Output" << std::endl; // header for output
-    double i_error;
-    while (chassis.isInMotion()) {
-        int start_t = pros::millis();
-        double theta = chassis.getPose().theta; // get the current error
-        double err_ang = chassis.getPose().theta - target;  // old-style, may need to track your own error
-        double d_error = -(imu.get_gyro_rate().z); 
-        i_error += err_ang * (millis() - last_t); // integral term, can be used for anti-windup
-        double last_t = millis();
-        double u = angular_controller.kP * err_ang
-                 + angular_controller.kI * i_error
-                 + angular_controller.kD * d_error; // compute the control output
-        std::cout << millis() << ", " << err_ang << ", " << angular_controller.kP * err_ang
-         << ", " << angular_controller.kI * i_error << ", " << angular_controller.kD * d_error
-         << ", " << u << std::endl;
-               // delay to save resources
-        if (pros::millis() - start_t < loop_frequency) {
-            pros::delay(loop_frequency - (pros::millis() - start_t));
-        }
-}
+    startGenericAsyncPidLogger(&chassis, angular_controller, &imu, PidMode::Angular, 90);
 }
 
 /**
@@ -194,8 +182,8 @@ void autonomous()
 void opcontrol() {
 	// using namespace pros;
     
-    autonomous();
-    return; // Uncomment this line to run autonomous instead of opcontrol
+    // autonomous();
+    // return; // Uncomment this line to run autonomous instead of opcontrol
 
     // loop forever
     while (true) {
