@@ -6,13 +6,6 @@ void genericPidLoggerTask(void* param) {
     auto* args = static_cast<GenericPidLoggerParams*>(param);
     args->chassis->setPose(0, 0, 0);
 
-    // Initiate movement
-    if (args->mode == PidMode::Angular) {
-        args->chassis->turnToHeading(args->target, args->timeout_ms);
-    } else {
-        args->chassis->moveToPoint(args->target, 0, args->timeout_ms);
-    }
-
     double last_t = pros::millis();
     double last_error = 0;
     double i_error = 0;
@@ -30,7 +23,7 @@ void genericPidLoggerTask(void* param) {
         if (args->mode == PidMode::Angular) {
             current = args->chassis->getPose().theta;
             error = current - args->target;
-            d_error = -args->imu->get_gyro_rate().z; // deg/sec
+            d_error = args->imu->get_gyro_rate().z; // deg/sec
         } else {
             current = args->chassis->getPose().x;
             error = args->target - current;
@@ -70,5 +63,11 @@ void startGenericAsyncPidLogger(
     auto* args = new GenericPidLoggerParams{
         chassis, controller, imu, mode, target, timeout_ms
     };
+    // Initiate movement
+    if (args->mode == PidMode::Angular) {
+        args->chassis->turnToHeading(args->target, args->timeout_ms, {}, true);
+    } else {
+        args->chassis->moveToPoint(args->target, 0, args->timeout_ms, {}, true);
+    }
     pros::Task task(genericPidLoggerTask, args);
 }
