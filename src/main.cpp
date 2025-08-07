@@ -81,7 +81,7 @@ lemlib::Chassis chassis(drivetrain, // drivetrain settings
                         &steer_curve
 );
 
-const int loop_frequency = 20; // milliseconds for each drive cycle
+const int loop_frequency = 100; // milliseconds for each drive cycle
 
 /**
  * A callback function for LLEMU's center button.
@@ -161,9 +161,20 @@ void autonomous()
     
     using namespace pros;
     // set position to x:0, y:0, heading:0
+    
     chassis.setPose(0, 0, 0);
     // turn to face heading 90 with a very long timeout
     startGenericAsyncPidLogger(&chassis, angular_controller, &imu, PidMode::Angular, 90);
+    // while (true)
+    // {
+    //     int start_t = pros::millis();
+    //     lemlib::Pose pose = chassis.getPose();
+    //     std::cout << "X: " << pose.x << ", Y: " << pose.y << ", Theta: " << pose.theta << std::endl;
+    //     if (pros::millis() - start_t < loop_frequency) {
+    //         pros::delay(loop_frequency - (pros::millis() - start_t));
+    //     }
+    //     std::cout << "\033[2J\033[1;1H";
+    // }
 }
 
 /**

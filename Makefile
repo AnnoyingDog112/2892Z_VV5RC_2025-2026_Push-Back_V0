@@ -16,6 +16,11 @@ WARNFLAGS+=
 EXTRA_CFLAGS=
 EXTRA_CXXFLAGS=
 
+CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
+CXXFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
+LDFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
+
+
 # Set to 1 to enable hot/cold linking
 USE_PACKAGE:=1
 
