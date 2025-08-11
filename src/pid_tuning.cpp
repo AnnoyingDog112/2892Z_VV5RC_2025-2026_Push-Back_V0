@@ -40,7 +40,7 @@ void start_angular_pid_logging_task(
     const lemlib::ControllerSettings& controller,
     float target,
     int timeout_ms,
-    float loop_delay_ms  // keep default ONLY in the header
+    int loop_delay_ms  // keep default ONLY in the header
 ) {
     auto* args = new AngularPidLogArgs{
         .chassis       = chassis,

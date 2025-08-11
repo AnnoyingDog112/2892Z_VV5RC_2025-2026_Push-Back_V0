@@ -21,6 +21,5 @@ void start_angular_pid_logging_task(
     const lemlib::ControllerSettings& controller,
     float target,
     int timeout_ms,
-    int loop_delay_ms = 20,  // Default loop delay
-    std::atomic<bool>* stop
+    int loop_delay_ms = 20  // Default loop delay
 );
