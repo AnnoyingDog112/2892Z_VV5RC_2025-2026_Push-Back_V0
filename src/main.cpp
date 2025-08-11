@@ -2,7 +2,7 @@
 #include "lemlib/api.hpp"
 #include "api.h"
 #include <iostream>
-#include "Lemlib_pid-logging.hpp"
+#include "pid_tuning.hpp"
 
 // #include "okapi/api.hpp" // <-- UNCOMMENT THIS LINE
 
@@ -113,6 +113,7 @@ void initialize()
 	using namespace pros::lcd;
 	pros::delay(500);
     lcd::initialize();
+    imu.reset(true);
 	set_text(1, "Hello PROS User!");
 
     std::cout << "=== Program started ===" << std::endl;
@@ -120,7 +121,6 @@ void initialize()
     chassis.calibrate(); // optional: waits for IMU calibration
     chassis.setPose(0, 0, 0); // optional: initialize position
     autonomous(); // non-blocking
-
 }
 
 /**
@@ -161,10 +161,13 @@ void autonomous()
     
     using namespace pros;
     // set position to x:0, y:0, heading:0
-    
+
     chassis.setPose(0, 0, 0);
+    start_angular_pid_logging_task(&chassis, &imu, angular_controller, 90, 5000, 20); // Example usage of angular PID logging
     // turn to face heading 90 with a very long timeout
-    startGenericAsyncPidLogger(&chassis, angular_controller, &imu, PidMode::Angular, 90);
+    float target = 90; // target heading in degrees
+    
+    
     // while (true)
     // {
     //     int start_t = pros::millis();
@@ -262,8 +265,7 @@ void opcontrol() {
             conveyor_motor.move_velocity(0); // stop conveyor
         }
         // delay to save resources
-        if (pros::millis() - start_t < loop_frequency) {
+        if (pros::millis() - start_t <= loop_frequency) 
             pros::delay(loop_frequency - (pros::millis() - start_t));
-        }
     }
 }
