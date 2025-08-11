@@ -11,7 +11,7 @@ struct AngularPidLogArgs {
     float target;
     int timeout_ms;
     int loop_delay_ms = 20;
-    std::atomic<bool> stop{true};
+    std::atomic<bool> stop{false};
 };
 
 // Launches PID logging in a separate task
