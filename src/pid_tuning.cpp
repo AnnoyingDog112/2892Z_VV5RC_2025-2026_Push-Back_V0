@@ -32,6 +32,7 @@ static void angular_pid_logging_task(void* param) {
     }
 
     delete args;  // Free heap-allocated struct (task owns it)
+    return;
 }
 
 void start_angular_pid_logging_task(
@@ -55,9 +56,11 @@ void start_angular_pid_logging_task(
     // fire-and-forget logging task; it will free args when done
     pros::Task{angular_pid_logging_task, args};
 
+    pros::delay(100);  // Give logging task time to start
+
     // Perform the motion while logging runs
     // Make this call BLOCKING so logging continues throughout the move
-    chassis->turnToHeading(target, timeout_ms, {}, true);
+    chassis->turnToHeading(target, timeout_ms, {}, false);
 
     // Signal the logger to stop once the motion is done
     args->stop.store(true, std::memory_order_release);

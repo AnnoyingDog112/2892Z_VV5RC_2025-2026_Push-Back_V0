@@ -1,44 +1,50 @@
+#include <iostream>
 #include "main.h"
 #include "lemlib/api.hpp"
 #include "api.h"
-#include <iostream>
 #include "pid_tuning.hpp"
 
 // #include "okapi/api.hpp" // <-- UNCOMMENT THIS LINE
 
 using namespace pros;
+using namespace lemlib;
 
 Controller controller(E_CONTROLLER_MASTER);
 
-Motor intake_motor(-12, MotorGearset::green); // Intake motor on port 4
-Motor conveyor_motor(3, MotorGearset::green); // Flywheel motor on port
+Motor intake_motor(1, MotorGearset::blue); // Intake motor on port 4
+Motor lift_motor(2, MotorGearset::red); // Flywheel motor on port
 
 // Create motor groups for left and right sides
-MotorGroup left_motors({1}, MotorGearset::green); // Left motor group with blue gearset
-MotorGroup right_motors({-10}, MotorGearset::green); // Right motor group with blue gearset 
+MotorGroup left_motors({11, 12, 13}, MotorGearset::blue); // Left motor group with blue gearset
+MotorGroup right_motors({-18, -19, -20}, MotorGearset::blue); // Right motor group with blue gearset 
 
 // Update drivetrain initialization to use motor groups and required parameters
-lemlib::Drivetrain drivetrain(
+Drivetrain drivetrain(
 	&left_motors, // left motor group
 	&right_motors, // right motor group
 	11.5, // track width in inches
 	lemlib::Omniwheel::NEW_4, // wheel diameter in inches (update as needed)
-	200, // drivetrain rpm
+	450, // drivetrain rpm
 	8 // horizontal drift
 );
 
 Imu imu(4);
+Rotation horizontal_rotation_sensor(15);
 
-lemlib::OdomSensors sensors(nullptr, // vertical tracking wheel 1, set to null
-                            nullptr, // vertical tracking wheel 2, set to nullptr as we are using IMEs
-                            nullptr, // horizontal tracking wheel 1
+TrackingWheel horizontal_tracking_wheel(&horizontal_rotation_sensor, lemlib::Omniwheel::NEW_275, -4.75);
+TrackingWheel left_drivetrain_tracking_wheel(&left_motors, lemlib::Omniwheel::NEW_275, -5.75, 450);
+TrackingWheel right_drivetrain_tracking_wheel(&left_motors, lemlib::Omniwheel::NEW_275, 5.75, 450);
+
+
+OdomSensors sensors(&left_drivetrain_tracking_wheel, // vertical tracking wheel 1, set to null
+                            &right_drivetrain_tracking_wheel, // vertical tracking wheel 2, set to nullptr as we are using IMEs
+                            &horizontal_tracking_wheel, // horizontal tracking wheel 1
                             nullptr, // horizontal tracking wheel 2, set to nullptr as we don't have a second one
                             &imu // inertial sensor
 );
-// lemlib::Chassis chassis(drivetrain, linearController, angularController, sensors, &throttleCurve, &steerCurve);
 
 // lateral PID controller
-lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
+ControllerSettings lateral_controller(10, // proportional gain (kP)
                                               0, // integral gain (kI)
                                               3, // derivative gain (kD)
                                               0, // anti windup
@@ -50,9 +56,9 @@ lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
 );
 
 // angular PID controller
-lemlib::ControllerSettings angular_controller(1, // proportional gain (kP)
+ControllerSettings angular_controller(2, // proportional gain (kP)
                                               0, // integral gain (kI)
-                                              1, // derivative gain (kD)
+                                              0.5, // derivative gain (kD)
                                               0, // anti windup
                                               0, // small error range, in degrees
                                               0, // small error range timeout, in milliseconds
@@ -61,19 +67,19 @@ lemlib::ControllerSettings angular_controller(1, // proportional gain (kP)
                                               0); // maximum acceleration (slew)
 
 // input curve for throttle input during driver control
-lemlib::ExpoDriveCurve throttle_curve(3, // joystick deadband out of 127
+ExpoDriveCurve throttle_curve(3, // joystick deadband out of 127
                                      10, // minimum output where drivetrain will move out of 127
-                                     1.019 // expo curve gain
+                                     1.25 // expo curve gain
 );
 
 // input curve for steer input during driver control
-lemlib::ExpoDriveCurve steer_curve(3, // joystick deadband out of 127
+ExpoDriveCurve steer_curve(3, // joystick deadband out of 127
                                   10, // minimum output where drivetrain will move out of 127
-                                  1.019 // expo curve gain
+                                  1.25 // expo curve gain
 );
 
 // create the chassis
-lemlib::Chassis chassis(drivetrain, // drivetrain settings
+Chassis chassis(drivetrain, // drivetrain settings
                         lateral_controller, // lateral PID settings
                         angular_controller, // angular PID settings
                         sensors, // odometry sensors
@@ -81,26 +87,15 @@ lemlib::Chassis chassis(drivetrain, // drivetrain settings
                         &steer_curve
 );
 
-const int loop_frequency = 100; // milliseconds for each drive cycle
+PID lift_pid(0.5,
+            0,
+            0.1,
+            0,
+            false); // PID for lift
 
-/**
- * A callback function for LLEMU's center button.
- *
- * When this callback is fired, it will toggle line 2 of the LCD text between
- * "I was pressed!" and nothing.
- */
-void on_center_button() 
-{
-	using namespace pros::lcd;
-	
-	static bool pressed = false;
-	pressed = !pressed;
-	if (pressed) {
-		lcd:: set_text(2, "I was pressed!");
-	} else {
-		lcd:: clear_line(2);
-	}
-}
+
+
+const int loop_frequency = 100; // milliseconds for each drive cycle
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -114,13 +109,13 @@ void initialize()
 	pros::delay(500);
     lcd::initialize();
     imu.reset(true);
+    pros::delay(2000);
 	set_text(1, "Hello PROS User!");
 
     std::cout << "=== Program started ===" << std::endl;
-    register_btn1_cb(on_center_button);
     chassis.calibrate(); // optional: waits for IMU calibration
     chassis.setPose(0, 0, 0); // optional: initialize position
-    autonomous(); // non-blocking
+    // ?autonomous(); // non-blocking
 }
 
 /**
@@ -194,26 +189,26 @@ void autonomous()
  * task, not resume it from where it left off.
  */
 void opcontrol() {
-	// using namespace pros;
+    using namespace pros;
     
     // autonomous();
     // return; // Uncomment this line to run autonomous instead of opcontrol
 
     // loop forever
     while (true) {
-        int start_t = pros::millis();
+        int start_t = millis();
 
         // get left y and right y positions
-        int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
-        int leftX = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X);
-        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+        int leftY = controller.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
+        int rightY = controller.get_analog(E_CONTROLLER_ANALOG_RIGHT_Y);
+        int leftX = controller.get_analog(E_CONTROLLER_ANALOG_LEFT_X);
+        int rightX = controller.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
         
-        bool intakeButtonForward = controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1);
-        bool intakeButoonBackwards = controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2);
+        bool intakeButtonForward = controller.get_digital(E_CONTROLLER_DIGITAL_R1);
+        bool intakeButoonBackwards = controller.get_digital(E_CONTROLLER_DIGITAL_R2);
 
-        bool conveyorButtonForward = controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1);
-        bool conveyorButtonBackwards = controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2);
+        bool liftButtonUp = controller.get_digital(E_CONTROLLER_DIGITAL_UP);
+        bool liftButtonDown = controller.get_digital(E_CONTROLLER_DIGITAL_DOWN);
 
         // move the robot
         // if ((/*left_motors.is_over_current()  or*/ left_motors.is_over_temp()) or 
@@ -230,10 +225,10 @@ void opcontrol() {
         
         // chassis.tank(leftY, rightY); // Switching to arcade drive for now
         
-        // int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        // int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+        // int leftY = controller.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
+        // int rightX = controller.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
 
-        chassis.arcade(leftY, rightX); // Arcade drive with left and right y positions
+        chassis.tank(leftY, rightY); // Arcade drive with left and right y positions
 
         // move intake forward or backwards
         // if (intake_motor.is_over_temp() /*or intake_motor.is_over_current()*/) {
@@ -251,21 +246,15 @@ void opcontrol() {
         }
 
         // move conveyor forward or backwards
-        // if (conveyor_motor.is_over_temp() /*or conveyor_motor.is_over_current()*/) {
-        //     conveyor_motor.move(0); // stop conveyor if it is overheating
-        //     controller.rumble("-"); // rumble controller to indicate overheating
-        //     controller.clear_line(0); // clear the first line of the controller  
-        //     controller.print(0, 0, "Conveyor Motors are overheating! Stopping movement.");
-        //     delay(1000); // wait for a second to let the user see the message
-        /*} else*/ if (conveyorButtonForward) {
-            conveyor_motor.move_velocity(200); // move conveyor forward at 200 rpm
-        } else if (conveyorButtonBackwards) {
-            conveyor_motor.move_velocity(-200); // move conveyor backwards at -200 rpm
+        if (liftButtonUp) {
+            lift_motor.move_velocity(200); // move conveyor forward at 200 rpm
+        } else if (liftButtonDown) {
+            lift_motor.move_velocity(-200); // move conveyor backwards at -200 rpm
         } else {
-            conveyor_motor.move_velocity(0); // stop conveyor
+            lift_motor.move_velocity(0); // stop conveyor
         }
         // delay to save resources
-        if (pros::millis() - start_t <= loop_frequency) 
-            pros::delay(loop_frequency - (pros::millis() - start_t));
+        if (millis() - start_t <= loop_frequency) 
+            delay(loop_frequency - (millis() - start_t));
     }
 }
