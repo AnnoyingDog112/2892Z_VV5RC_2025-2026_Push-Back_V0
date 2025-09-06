@@ -33,7 +33,7 @@ Rotation horizontal_rotation_sensor(15);
 
 TrackingWheel horizontal_tracking_wheel(&horizontal_rotation_sensor, lemlib::Omniwheel::NEW_275, -4.75);
 TrackingWheel left_drivetrain_tracking_wheel(&left_motors, lemlib::Omniwheel::NEW_275, -5.75, 450);
-TrackingWheel right_drivetrain_tracking_wheel(&left_motors, lemlib::Omniwheel::NEW_275, 5.75, 450);
+TrackingWheel right_drivetrain_tracking_wheel(&right_motors, lemlib::Omniwheel::NEW_275, 5.75, 450);
 
 
 OdomSensors sensors(&left_drivetrain_tracking_wheel, // vertical tracking wheel 1, set to null
@@ -56,9 +56,9 @@ ControllerSettings lateral_controller(10, // proportional gain (kP)
 );
 
 // angular PID controller
-ControllerSettings angular_controller(2, // proportional gain (kP)
+ControllerSettings angular_controller(0.2, // proportional gain (kP)
                                               0, // integral gain (kI)
-                                              0.5, // derivative gain (kD)
+                                              0, // derivative gain (kD)
                                               0, // anti windup
                                               0, // small error range, in degrees
                                               0, // small error range timeout, in milliseconds
@@ -115,7 +115,7 @@ void initialize()
     std::cout << "=== Program started ===" << std::endl;
     chassis.calibrate(); // optional: waits for IMU calibration
     chassis.setPose(0, 0, 0); // optional: initialize position
-    // ?autonomous(); // non-blocking
+    autonomous(); // non-blocking
 }
 
 /**
@@ -157,7 +157,9 @@ void autonomous()
     using namespace pros;
     // set position to x:0, y:0, heading:0
 
+    std::cout << "\033[2J\033[1;1H"; // clear terminal
     chassis.setPose(0, 0, 0);
+    // while (true) std::cout << "X: " << chassis.getPose().x << ", Y: " << chassis.getPose().y << ", Theta: " << chassis.getPose().theta << std::endl;
     start_angular_pid_logging_task(&chassis, &imu, angular_controller, 90, 5000, 20); // Example usage of angular PID logging
     // turn to face heading 90 with a very long timeout
     float target = 90; // target heading in degrees
@@ -171,7 +173,7 @@ void autonomous()
     //     if (pros::millis() - start_t < loop_frequency) {
     //         pros::delay(loop_frequency - (pros::millis() - start_t));
     //     }
-    //     std::cout << "\033[2J\033[1;1H";
+    //     
     // }
 }
 
