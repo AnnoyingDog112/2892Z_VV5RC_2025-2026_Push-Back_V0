@@ -3,6 +3,7 @@
 #include "lemlib/api.hpp"
 #include "api.h"
 #include "pid_tuning.hpp"
+#include "config.hpp"
 
 // #include "okapi/api.hpp" // <-- UNCOMMENT THIS LINE
 
@@ -44,9 +45,9 @@ OdomSensors sensors(&left_drivetrain_tracking_wheel, // vertical tracking wheel 
 );
 
 // lateral PID controller
-ControllerSettings lateral_controller(10, // proportional gain (kP)
-                                              0, // integral gain (kI)
-                                              3, // derivative gain (kD)
+ControllerSettings lateral_controller(KP_LATERAL, // proportional gain (kP)
+                                              KI_LATERAL, // integral gain (kI)
+                                              KD_LATERAL, // derivative gain (kD)
                                               0, // anti windup
                                               0, // small error range, in inches
                                               0, // small error range timeout, in milliseconds
@@ -56,9 +57,9 @@ ControllerSettings lateral_controller(10, // proportional gain (kP)
 );
 
 // angular PID controller
-ControllerSettings angular_controller(0.2, // proportional gain (kP)
-                                              0, // integral gain (kI)
-                                              0, // derivative gain (kD)
+ControllerSettings angular_controller(KP_ANGULAR, // proportional gain (kP)
+                                              KI_ANGULAR, // integral gain (kI)
+                                              KD_ANGULAR, // derivative gain (kD)
                                               0, // anti windup
                                               0, // small error range, in degrees
                                               0, // small error range timeout, in milliseconds
@@ -92,9 +93,6 @@ PID lift_pid(0.5,
             0.1,
             0,
             false); // PID for lift
-
-
-
 const int loop_frequency = 100; // milliseconds for each drive cycle
 
 /**
@@ -112,6 +110,7 @@ void initialize()
     pros::delay(2000);
 	set_text(1, "Hello PROS User!");
 
+    pros::delay(1000);
     std::cout << "=== Program started ===" << std::endl;
     chassis.calibrate(); // optional: waits for IMU calibration
     chassis.setPose(0, 0, 0); // optional: initialize position
@@ -156,8 +155,8 @@ void autonomous()
     
     using namespace pros;
     // set position to x:0, y:0, heading:0
-
-    std::cout << "\033[2J\033[1;1H"; // clear terminal
+    std::cout << KP_ANGULAR << ", " << KI_ANGULAR << ", "<< KD_ANGULAR << std::endl;
+    // std::cout << "\033[2J\033[1;1H"; // clear terminal
     chassis.setPose(0, 0, 0);
     // while (true) std::cout << "X: " << chassis.getPose().x << ", Y: " << chassis.getPose().y << ", Theta: " << chassis.getPose().theta << std::endl;
     start_angular_pid_logging_task(&chassis, &imu, angular_controller, 90, 5000, 20); // Example usage of angular PID logging
